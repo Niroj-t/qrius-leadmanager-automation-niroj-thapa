@@ -14,3 +14,5 @@ export const agent: User = {
   password: "Agent@123",
   role: "AGENT",
 };
+
+export const SEEDED_LEAD_COUNT = 12;
