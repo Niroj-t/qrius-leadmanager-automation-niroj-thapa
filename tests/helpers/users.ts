@@ -16,3 +16,4 @@ export const agent: User = {
 };
 
 export const SEEDED_LEAD_COUNT = 12;
+export const STATUSES = ['New', 'Contacted', 'Qualified', 'Lost'];
