@@ -2,7 +2,7 @@
 
 Judgement is exactly one of: **my test is wrong** or **the application has a bug**.
 
-## Failed tests
+## Search by company name and Count text after a search
 
 Test 1: Searching by a company name narrows the list
 Result: Failed
@@ -15,24 +15,8 @@ Judgement: The application has a bug
 Reasoning: After a search leaves 1 row, the count text still shows the full total instead of the number shown.
 
 
-## Details
-
-### 1. Search by company name
-
-- Test: `search.spec.ts` › searching by a company name narrows the list
-- Expected: Searching "Daraz" shows 1 row, Bikash Shrestha.
-- Actual: 0 rows and the "No leads found." empty state. (confirm in trace)
-  a row, so the filter works for the name column only.
-- Why not my test: "Daraz" is a company in the seeded data, and the brief says
-  searching by company name should narrow the list. My locators and assertions are correct.
-- Judgement: the application has a bug.
-
-### 2. Count text after a search
-
-- Test: `search.spec.ts` › count text reflects how many leads are shown after a search
-- Expected: "Showing 1 of 12 leads" after searching "Sita".
-- Actual: "Showing 12 of 12 leads" with 1 row visible. (confirm in trace)
-- Why not my test: The `toHaveCount(1)` assertion passes just before, so the
-  list did narrow. Only the count text is wrong, and the brief says it should
-  reflect how many leads are shown.
-- Judgement: the application has a bug.
+### Add a lead
+Test: Adding a lead with status "Contacted" / "Qualified" / "Lost" saves that status
+Result: Failed (3 tests)
+Judgement: The application has a bug
+Reasoning: The request sends the chosen status but every saved lead shows "New", while the "New" test passes, so the backend ignores the status.
