@@ -1,22 +1,31 @@
-# FINDINGS
+## Judgement is exactly one of: my test is wrong or the application has a bug.
 
-Judgement is exactly one of: **my test is wrong** or **the application has a bug**.
+## Admin signs in and reaches the Leads page (login.spec.ts)
+- **Predicted:** the browser moves to /leads, the "Leads" heading is shown, and the role badge reads ADMIN
+- **Actual:** passed, but the role badge was never checked
+- **Verdict:** My test is wrong
+- **Reasoning:** My prediction included the ADMIN role badge, but the test only checked the heading.
 
-## Search by company name and Count text after a search
+## Searching by company name narrows the list(search.spec.ts)
+- **Predicted:** searching Daraz narrows the list to its lead(s)
+- **Actual:** 0 rows shown, although the lead exists in the database
+- **Verdict:** The application has a bug
+- **Reasoning:** The same search by hand also returns nothing, the company is in the leads table, and the brief says company search should work.
 
-Test 1: Searching by a company name narrows the list
-Result: Failed
-Judgement: The application has a bug
-Reasoning: Searching "Daraz", a company that exists in the data, returns no rows, so the search ignores the company field.
+## Count text reflects how many leads are shown after a search (search.spec.ts)
+- **Predicted:** after a search leaves 1 row, the count text shows 1 of the total
+- **Actual:** the count text still shows the full total
+- **Verdict:** The application has a bug
+- **Reasoning:** The list is filtered to 1 row, but the count text is not updated to the number of leads shown.
 
-Test 2: Count text reflects how many leads are shown after a search
-Result: Failed
-Judgement: The application has a bug
-Reasoning: After a search leaves 1 row, the count text still shows the full total instead of the number shown.
+## adding a lead with a chosen status saves it with that status(add-lead.spec.ts)
+- **Predicted:** after adding Niroj Qualified with status Qualified, her row shows status Qualified
+- **Actual:** Niroj Qualified is added but her row shows status New
+- **Verdict:** The application has a bug.
+- **Reasoning:** The status is not changing.
 
-
-### Add a lead
-Test: Adding a lead with status "Contacted" / "Qualified" / "Lost" saves that status
-Result: Failed (3 tests)
-Judgement: The application has a bug
-Reasoning: The request sends the chosen status but every saved lead shows "New", while the "New" test passes, so the backend ignores the status.
+## An admin can delete Sita Sharma and the row disappears (delete-lead.spec.ts)
+- **Predicted:** the admin deletes  Sita Sharma and her row disappears from the list
+- **Actual:** failed before the delete, because no row containing "Sita Sharma" was found
+- **Verdict:** My test is wrong
+- **Reasoning:** I did not reset the data, so Sita Sharma was already deleted by an earlier run.
