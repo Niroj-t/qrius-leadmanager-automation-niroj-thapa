@@ -14,6 +14,7 @@ test.describe('Login', () => {
   test('admin signs in and reaches the Leads page', async ({ page }) => {
     await login(page, admin);
     await expect(page.getByRole('heading', { name: 'Leads', exact: true })).toBeVisible();
+    await expect(page.getByTestId('nav-role')).toHaveText(admin.role);
   });
 
   // Prediction: The browser moves to /leads, the role badge reads AGENT.
