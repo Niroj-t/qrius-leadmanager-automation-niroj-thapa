@@ -1,63 +1,43 @@
 import { test, expect } from '@playwright/test';
-import { login } from './helpers/auth';
-import { admin } from './helpers/users';
+import { LeadsPage } from '../pages/leadsPage';
+import { loginAsAdmin } from '../test-data/auth';
+import { statusLead, listLead } from '../test-data/leads';
 
 test.describe('Add a lead', () => {
+  let leads: LeadsPage;
+  let createdName: string | null = null; // the lead this test added, removed in afterEach
+
   test.beforeEach(async ({ page }) => {
-    await login(page, admin);
+    leads = new LeadsPage(page);
+    createdName = null;
+    await loginAsAdmin(page);
+    await expect(leads.rows.first()).toBeVisible(); // the list has loaded
   });
 
-  // Prediction: Adding a lead with the status "New" should save it as "New", and I expect this to pass because "New" is the default.
-  test('adding a lead with status "New" saves that status', async ({ page }) => {
-    await page.getByTestId('add-lead-button').click();
-    await page.getByTestId('name').fill('Niroj New');
-    await page.getByTestId('email').fill('niroj.new@example.com');
-    await page.getByTestId('company').fill('Test Company');
-    await page.getByTestId('status').selectOption('New');
-    await page.getByTestId('save-button').click();
-
+  // Remove the lead so the seeded data stays intact for the other specs.
+  test.afterEach(async () => {
+    if (!createdName) return;
+    await leads.deleteLead(createdName);
+    await expect(leads.rowFor(createdName)).toHaveCount(0);
   });
 
-  // Prediction: Adding a lead with the status "Contacted" should save it as "Contacted", but I expect this to fail because the backend ignores the chosen status.
-  test('adding a lead with status "Contacted" saves that status', async ({ page }) => {
-    await page.getByTestId('add-lead-button').click();
-    await page.getByTestId('name').fill('Niroj Contacted');
-    await page.getByTestId('email').fill('niroj.contacted@example.com');
-    await page.getByTestId('company').fill('Test Company');
-    await page.getByTestId('status').selectOption('Contacted');
-    await page.getByTestId('save-button').click();
+  test('adding a lead with a chosen status saves that lead with that status', async () => {
+    // prediction: after adding a lead with status "Qualified", its row shows a cell "Qualified".
+    // I expect this to FAIL because the backend ignores the chosen status and saves "New".
+    await leads.addLead(statusLead);
+    createdName = statusLead.name;
 
-    await expect(page.getByTestId('lead-status')).toHaveText('Contacted');
+    const row = leads.rowFor(statusLead.name);
+    await expect(row.getByRole('cell', { name: statusLead.status, exact: true })).toBeVisible();
   });
 
-  // Prediction: Adding a lead with the status "Qualified" should save it as "Qualified", but I expect this to fail because the backend ignores the chosen status.
-  test('adding a lead with status "Qualified" saves that status', async ({ page }) => {
-    await page.getByTestId('add-lead-button').click();
-    await page.getByTestId('name').fill('Niroj Qualified');
-    await page.getByTestId('email').fill('niroj.qualified@example.com');
-    await page.getByTestId('company').fill('Test Company');
-    await page.getByTestId('status').selectOption('Qualified');
-    await page.getByTestId('save-button').click();
+  test('the new lead appears in the list', async () => {
+    // prediction: after adding a lead, the list grows by 1 and exactly one row contains its name
+    const before = await leads.rows.count();
+    await leads.addLead(listLead);
+    createdName = listLead.name;
 
-    await expect(page.getByTestId('lead-status')).toHaveText('Qualified');
-  });
-
-  // Prediction: Adding a lead with the status "Lost" should save it as "Lost", but I expect this to fail because the backend ignores the chosen status.
-  test('adding a lead with status "Lost" saves that status', async ({ page }) => {
-    await page.getByTestId('add-lead-button').click();
-    await page.getByTestId('name').fill('Niroj Lost');
-    await page.getByTestId('email').fill('niroj.lost@example.com');
-    await page.getByTestId('company').fill('Test Company');
-    await page.getByTestId('status').selectOption('Lost');
-    await page.getByTestId('save-button').click();
-
-    await expect(page.getByTestId('lead-status')).toHaveText('Lost');
-  });
-
-  // Prediction: After saving, the new lead should appear in the list.
-  test('the new lead appears in the list', async ({ page }) => {
-
-    await page.getByTestId('search-input').fill('New');
-    await expect(page.getByTestId('lead-status')) .toHaveText('New');
+    await expect(leads.rowFor(listLead.name)).toHaveCount(1);
+    await expect(leads.rows).toHaveCount(before + 1);
   });
 });

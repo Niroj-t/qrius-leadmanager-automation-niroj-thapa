@@ -1,30 +1,32 @@
 import { test, expect } from '@playwright/test';
-import { login } from './helpers/auth';
-import { admin, agent } from './helpers/users';
+import { LeadsPage } from '../pages/leadsPage';
+import { loginAsAdmin, loginAsAgent } from '../test-data/auth';
+import { deletableLead, totalSeededLeads } from '../test-data/leads';
 
 test.describe('Delete a lead', () => {
-  // Prediction: An admin can delete Ram Thapa, and her row should disappear from the list; I expect this to pass because the delete button removes the lead without a confirmation dialog.
-  test('admin can delete Sita Sharma and the row disappears', async ({ page }) => {
-    await login(page, admin);
+  test('an admin can delete a lead and the row disappears', async ({ page }) => {
+    // prediction: after deleting a lead the admin just added, no row contains its name and the list is back to 12.
+    // The test adds its own lead, so the seeded leads are never touched and the test can be run again.
+    const leads = new LeadsPage(page);
+    await loginAsAdmin(page);
+    await expect(leads.rows).toHaveCount(totalSeededLeads);
 
-    const row = page.getByTestId('lead-row').filter({ hasText: 'Ram Thapa' });
-    await expect(row).toHaveCount(1);
+    await leads.addLead(deletableLead);
+    await expect(leads.rowFor(deletableLead.name)).toHaveCount(1);
+    await expect(leads.rows).toHaveCount(totalSeededLeads + 1);
 
-    await row.getByTestId('delete-button').click();
+    await leads.deleteLead(deletableLead.name);
 
-    await expect(row).toHaveCount(0);
-    await expect(page.getByTestId('lead-row')).toHaveCount(11);
-
+    await expect(leads.rowFor(deletableLead.name)).toHaveCount(0);
+    await expect(leads.rows).toHaveCount(totalSeededLeads);
   });
 
-  // Prediction: An agent should not see any delete button; I expect this to pass because the page only renders the delete button for admins.
-  test('agent does not see a delete button', async ({ page }) => {
-    await login(page, agent);
+  test('an agent does not see a delete button', async ({ page }) => {
+    // prediction: agent sees the lead rows, and there are 0 delete buttons on the page
+    const leads = new LeadsPage(page);
+    await loginAsAgent(page);
+    await expect(leads.rows.first()).toBeVisible();
 
-    await expect(page.getByTestId('nav-role')).toHaveText('AGENT');
-    await expect(page.getByTestId('lead-row')).toHaveCount(11);
-
-    await expect(page.getByTestId('delete-button')).toHaveCount(0);
-    
+    await expect(leads.deleteButtons).toHaveCount(0);
   });
 });

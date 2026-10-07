@@ -1,37 +1,42 @@
 import { test, expect } from '@playwright/test';
-import { login } from './helpers/auth';
-import { admin, agent } from './helpers/users';
+import { LoginPage } from '../pages/loginPage';
+import { LeadsPage } from '../pages/leadsPage';
+import { loginAs } from '../test-data/auth';
+import { admin, agent, wrongPasswordUser } from '../test-data/users';
+import { totalSeededLeads } from '../test-data/leads';
 
 test.describe('Login', () => {
-  // Prediction: The title is "Qrius Lead Manager" and the heading reads "Lead Manager".
   test('login page has the correct title', async ({ page }) => {
-    await page.goto('/login');
+    // prediction: tab title is "Qrius Lead Manager" and an h2 "Lead Manager" is visible
+    const login = new LoginPage(page);
+    await login.goto();
     await expect(page).toHaveTitle('Qrius Lead Manager');
-    await expect(page.getByRole('heading', { name: 'Lead Manager', level: 2 })).toBeVisible();
+    await expect(login.heading).toBeVisible();
   });
 
-  // Prediction: The browser moves to /leads, the "Leads" heading is shown,and the role badge reads ADMIN.
-  test('admin signs in and reaches the Leads page', async ({ page }) => {
-    await login(page, admin);
-    await expect(page.getByRole('heading', { name: 'Leads', exact: true })).toBeVisible();
-    await expect(page.getByTestId('nav-role')).toHaveText(admin.role);
+  test('admin can sign in and reaches the Leads page', async ({ page }) => {
+    // prediction: URL becomes /leads, nav-role shows "ADMIN", 12 lead rows are visible
+    const leads = new LeadsPage(page);
+    await loginAs(page, admin);
+    await expect(page).toHaveURL(/\/leads/);
+    await expect(leads.navRole).toHaveText('ADMIN');
+    await expect(leads.rows).toHaveCount(totalSeededLeads);
   });
 
-  // Prediction: The browser moves to /leads, the role badge reads AGENT.
-  test('agent signs in and sees their role', async ({ page }) => {
-    await login(page, agent);
-    await expect(page.getByTestId('nav-role')).toHaveText(agent.role);
+  test('agent can sign in and sees their role', async ({ page }) => {
+    // prediction: URL becomes /leads, nav-user shows "agent.qrius", nav-role shows "AGENT"
+    const leads = new LeadsPage(page);
+    await loginAs(page, agent);
+    await expect(page).toHaveURL(/\/leads/);
+    await expect(leads.navUser).toHaveText(agent.username);
+    await expect(leads.navRole).toHaveText('AGENT');
   });
-
-  // Prediction: Prediction: The URL stays on /login and the message "Invalid username or password" is displayed.
 
   test('wrong password shows an error and stays on the login page', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByTestId('username').fill(admin.username);
-    await page.getByTestId('password').fill('Wrong@123');
-    await page.getByRole('button', { name: 'Sign in' }).click();
-
-    await expect(page.getByTestId('login-error')).toHaveText('Invalid username or password');
-    await expect(page).toHaveURL(/\/login$/);
+    // prediction: URL stays on /login and the message "Invalid username or password" is visible
+    const login = new LoginPage(page);
+    await loginAs(page, wrongPasswordUser);
+    await expect(page).toHaveURL(/\/login/);
+    await expect(login.errorMessage).toHaveText('Invalid username or password');
   });
 });

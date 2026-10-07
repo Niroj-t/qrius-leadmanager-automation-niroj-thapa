@@ -1,24 +1,45 @@
 import { test, expect } from '@playwright/test';
-import { login } from './helpers/auth';
-import { admin } from './helpers/users';
+import { LeadsPage } from '../pages/leadsPage';
+import { loginAsAdmin } from '../test-data/auth';
+import { seededLead, editedStatus, editedEmail } from '../test-data/leads';
 
 test.describe('Edit a lead', () => {
+  let leads: LeadsPage;
+
   test.beforeEach(async ({ page }) => {
-    await login(page, admin);
+    leads = new LeadsPage(page);
+    await loginAsAdmin(page);
+    await expect(leads.rows.first()).toBeVisible(); // the list has loaded
   });
 
-  // Prediction: Editing Hari Koirala's status from "New" to "Qualified" should update the status shown in the list, and I expect this to pass because the backend saves the status on update.
-  test('editing a lead status updates it in the list', async ({ page }) => {
-    // Starting state from the seed data.
-    const row = page.getByTestId('lead-row').filter({ hasText: 'Hari Koirala' });
-    
-    await expect(row.getByTestId('lead-status'),).toHaveText('New');
-    
-    await row.getByTestId('edit-button').click();
-    await page.getByTestId('status').selectOption('Qualified');
-    await page.getByTestId('save-button').click();
+  // Put Sita Sharma back to her seeded values so the tests can be run again.
+  test.afterEach(async () => {
+    await leads.editStatus(seededLead.name, seededLead.status);
+    await leads.editEmail(seededLead.name, seededLead.email);
+    const row = leads.rowFor(seededLead.name);
+    await expect(row.getByRole('cell', { name: seededLead.email, exact: true })).toBeVisible();
+    await expect(row.getByRole('cell', { name: seededLead.status, exact: true })).toBeVisible();
+  });
 
-    await expect(page.getByTestId('lead-modal')).toBeHidden();
-    await expect(row.getByTestId('lead-status'),).toHaveText('Qualified');
+  test("editing a lead's status updates it in the list", async () => {
+    // prediction: Sita Sharma's status changes from "New" to "Contacted" in the list
+    const row = leads.rowFor(seededLead.name);
+    await expect(row.getByRole('cell', { name: seededLead.status, exact: true })).toBeVisible();
+
+    await leads.editStatus(seededLead.name, editedStatus);
+
+    await expect(row.getByRole('cell', { name: editedStatus, exact: true })).toBeVisible();
+    await expect(row.getByRole('cell', { name: seededLead.status, exact: true })).toHaveCount(0);
+  });
+
+  test("editing a lead's email updates it in the list", async () => {
+    // prediction: Sita Sharma's email changes from "sita@himalkart.com.np" to "sita.sharma@himalkart.com.np"
+    const row = leads.rowFor(seededLead.name);
+    await expect(row.getByRole('cell', { name: seededLead.email, exact: true })).toBeVisible();
+
+    await leads.editEmail(seededLead.name, editedEmail);
+
+    await expect(row.getByRole('cell', { name: editedEmail, exact: true })).toBeVisible();
+    await expect(row.getByRole('cell', { name: seededLead.email, exact: true })).toHaveCount(0);
   });
 });

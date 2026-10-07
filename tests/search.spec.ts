@@ -1,46 +1,45 @@
 import { test, expect } from '@playwright/test';
-import { login } from './helpers/auth';
-import { admin, SEEDED_LEAD_COUNT } from './helpers/users';
+import { LeadsPage } from '../pages/leadsPage';
+import { loginAsAdmin } from '../test-data/auth';
+import { seededLead, totalSeededLeads, nonExistentSearch } from '../test-data/leads';
 
 test.describe('Search', () => {
+  let leads: LeadsPage;
+
   test.beforeEach(async ({ page }) => {
-    await login(page, admin);
-    await expect(page.getByTestId('lead-row')).toHaveCount(SEEDED_LEAD_COUNT);
+    leads = new LeadsPage(page);
+    await loginAsAdmin(page);
+    await expect(leads.rows).toHaveCount(totalSeededLeads);
   });
 
-  // Prediction: Searching by a lead's name should narrow the list to the matching lead.
-  test('searching by lead name narrows the list', async ({ page }) => {
-    await page.getByTestId('search-input').fill('Sita');
-
-    await expect(page.getByTestId('lead-row')).toHaveCount(1);
-    await expect(
-      page.getByTestId('lead-row').filter({ hasText: 'Sita Sharma' }),
-    ).toBeVisible();
+  test("searching by a lead's name narrows the list", async () => {
+    // prediction: searching "Sita Sharma" leaves 1 row, and it contains "Sita Sharma"
+    await leads.search(seededLead.name);
+    await expect(leads.rows).toHaveCount(1);
+    await expect(leads.rows).toContainText(seededLead.name);
   });
 
-  // Prediction: Searching by a company name should narrow the list to the lead associated with that company.
-  test('searching by company name narrows the list', async ({ page }) => {
-    await page.getByTestId('search-input').fill('Daraz');
-
-    await expect(page.getByTestId('lead-row')).toHaveCount(1);
-    await expect(
-      page.getByTestId('lead-row').filter({ hasText: 'Bikash Shrestha' }),
-    ).toBeVisible();
+  test('searching by a company name narrows the list', async () => {
+    // prediction: searching "HimalKart" leaves 1 row, and it shows "HimalKart".
+    // I expect this to FAIL because the backend only searches the name column.
+    await leads.search(seededLead.company);
+    await expect(leads.rows).toHaveCount(1);
+    await expect(leads.rows.filter({ hasNotText: seededLead.company })).toHaveCount(0);
   });
 
-  // Prediction: Searching for a non-existing name or company should display the "No leads found." empty state and show no lead rows.
-  test('searching for something that does not exist shows the empty state', async ({ page }) => {
-    await page.getByTestId('search-input').fill('zzzz-no-match');
-
-    await expect(page.getByTestId('empty-state')).toHaveText('No leads found.');
-    await expect(page.getByTestId('lead-row')).toHaveCount(0);
+  test('searching for something that does not exist shows the empty state', async () => {
+    // prediction: 0 rows and the "No leads found." message is visible
+    await leads.search(nonExistentSearch);
+    await expect(leads.rows).toHaveCount(0);
+    await expect(leads.emptyState).toHaveText('No leads found.');
   });
 
-  // Prediction: The lead count should update to reflect the number of leads displayed after applying the search.
-  test('count text reflects how many leads are shown after a search', async ({ page }) => {
-    await page.getByTestId('search-input').fill('Sita');
-
-    await expect(page.getByTestId('lead-row')).toHaveCount(1);
-    await expect(page.getByTestId('lead-count')).toHaveText('Showing 1 of 12 leads');
+  test('the count text reflects how many leads are shown after a search', async () => {
+    // prediction: before searching it shows "Showing 12 of 12 leads"; after searching "Sita Sharma" it shows "Showing 1 of 12 leads".
+    // I expect this to FAIL because the page always shows the stored total.
+    await expect(leads.countText).toHaveText(`Showing ${totalSeededLeads} of ${totalSeededLeads} leads`);
+    await leads.search(seededLead.name);
+    await expect(leads.rows).toHaveCount(1);
+    await expect(leads.countText).toHaveText(`Showing 1 of ${totalSeededLeads} leads`);
   });
 });
